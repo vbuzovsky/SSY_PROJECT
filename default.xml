@@ -1,0 +1,14 @@
+
+<struct>
+		<const name="Command_ID" type="uint8"></const>
+		<value name="NodeType" type="uint8"/>
+		<value name="FullAddress" type="uint64"/>
+		<value name="ShortAddress" type="uint16"/>
+		<value name="SoftwareVersion" type="uint32"/>
+		<value name="ChannelMask" type="uint32"/>
+		<value name="PanID" type="uint16"/>
+		<value name="WorkingChannel" type="uint8"/>
+		<value name="ParentAddress" type="uint16"/>
+		<value name="LQI" type="uint8"/>
+		<value name="RSSI" type="int8"/>
+</struct>

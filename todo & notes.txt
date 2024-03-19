@@ -1,0 +1,19 @@
+TODO: DATA PARSING FROM UART IN PYTHON
+TODO: HAVE MULTIPLE CONFIGS AVAILABLE, WHICH WILL CHANGE HOW THE DATA WILL BE PARSED (for more see WSNMonitor/protocol/wsndemo_base.xml)
+TODO: CHECK INTO appInit() in WSNDemo.c, try to decode what is being send
+
+
+
+NOTES:
+0x02 -> 2(in decimal) -> STX (as Char) STX = start of text
+0x10 -> 16(in decimal) -> DLE (as Char) DLE = data link escape
+0x03 -> 3(in decimal) -> ETX (as Char) ETX = end of text
+
+CORRECT WNS Demo project:
+D:\AtmelStudio\xbuzov00\SSY_PROJECT\LwMesh_1_2_1\apps\WSNDemo\astudio\XplainedPro_ATmega256rfr2
+
+Atmel Application Note:
+https://ww1.microchip.com/downloads/en/Appnotes/atmel-42619-wsnmonitor-communication-protocol_at14341_application%20note_at14341.pdf
+
+MESSAGE FORMAT
+0x10 0x02 | message | 0x10 0x03 | checksum (1B)
