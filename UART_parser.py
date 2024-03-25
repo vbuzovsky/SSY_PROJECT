@@ -52,7 +52,7 @@ def transform_message(buff : list):
     fields = load_config()
     pointer = 0
 
-    print("buffer: ", buff[1:-2])
+    print("buffer: ", buff)
     for i, field in enumerate(fields):
         if field[-1][0] == "i":
             sign = True
@@ -69,14 +69,49 @@ def transform_message(buff : list):
             case '4':
                 length = 8
             
-        
-    
         value = buff[pointer:pointer+length]
         print("field: ", field, " value: ", value)
         pointer += length
     # --------------- HEADER ASSEMBLED
-    additional_start_pointer = 27 # ?
+        
+    additional_start_pointer = 27 # TODO: THIS SHOULD BE CALCULATED BASED ON STRUCT IN LOADED CONFIG
+    while 1:
     
+        # TODO: ADD SWICH FOR DIFF ADDITIONAL DATA TYPES (1 / 5 / 6 / 7 / 0x20)
+        allowed_types = ["0x01", "0x05", "0x06", "0x07", "0x20"]
+        if not(buff[additional_start_pointer] in allowed_types):
+            print("No additional data.. ending parsing message")
+            return
+
+        add_type = buff[additional_start_pointer]
+        add_leng = int(buff[additional_start_pointer+1], 0)
+        print("add type: ", add_type)
+        print("add leng: ", add_leng)
+
+        match add_type:
+            case "0x01": # Board type 1 sensors
+                data = buff[additional_start_pointer+2:additional_start_pointer+2+add_leng]
+                print("data (", add_type, " - sensor data):", data)
+            case "0x05": # Packet number
+                pass
+            case "0x06": # Time stamp
+                pass
+            case "0x07": # Active period
+                pass
+            case "0x20": # Node name
+                data = buff[additional_start_pointer+2:additional_start_pointer+2+add_leng]
+                print("data (", add_type, " - node name):", data)
+                ascii_chars = ''.join([chr(int(hex_val, 16)) for hex_val in data])
+                print("\n Node name: ", ascii_chars)
+
+        additional_start_pointer += 2 + add_leng # increment pointer to the next add field types
+        if(additional_start_pointer >= len(buff)):
+            break
+
+    print("\nFINISHED PARSING MESSAGE.\n")
+            
+
+
 
 
 def parse():
