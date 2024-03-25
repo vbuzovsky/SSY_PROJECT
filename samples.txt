@@ -4,7 +4,7 @@ COORDINATOR PERIOD MESSAGE
 0x02
 ------------- message
 0x01
------ Command_ID (0x10 or 0x10)
+----- Command_ID (0x01 or 0x10)
 0x02
 ----- Node type
 0x00

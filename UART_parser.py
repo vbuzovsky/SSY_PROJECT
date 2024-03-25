@@ -48,10 +48,38 @@ def pre_parse(x: bytes) -> bytes:
 
     return x
 
-def parse():
+def transform_message(buff : list):
     fields = load_config()
-    print("fields: ", fields)
+    pointer = 0
 
+    print("buffer: ", buff[1:-2])
+    for i, field in enumerate(fields):
+        if field[-1][0] == "i":
+            sign = True
+        else:
+            sign = False # use this if neccessary (add to value list)
+        
+        match field[-1][-1]:
+            case '8':
+                length = 1
+            case '6':
+                length = 2
+            case '2':
+                length = 4
+            case '4':
+                length = 8
+            
+        
+    
+        value = buff[pointer:pointer+length]
+        print("field: ", field, " value: ", value)
+        pointer += length
+    # --------------- HEADER ASSEMBLED
+    additional_start_pointer = 27 # ?
+    
+
+
+def parse():
     prev_byte_start = None
     prev_byte_end = None
     buffer = []
@@ -78,16 +106,13 @@ def parse():
                             prev_byte_end = x
                             x=ser.read()
 
-                    print("ended loading data")
-                    print("buffer: ", buffer[1:-2])
+                    #print("ended loading data")
+                    transform_message(buffer[1:-2])
                     buffer.clear()
+                    
             
             prev_byte_start = x
-
-        
-    
-
-                        
+                 
         
 if __name__ == "__main__":
     print(f"{PORT} opened: ", ser.is_open)
