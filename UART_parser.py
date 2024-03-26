@@ -2,6 +2,7 @@ import serial
 import string
 import argparse
 import xml.etree.ElementTree as ET
+from multiprocessing import Process,Pipe
 
 PORT = "COM3"
 BAUDRATE = 38400
@@ -48,17 +49,15 @@ def pre_parse(x: bytes) -> bytes:
 
     return x
 
-def transform_message(buff : list):
+def transform_message(buff : list) -> list:
     fields = load_config()
     pointer = 0
+    # fill this with recieved data, and pass it
+    header_data = [] 
+    additional_data = []
 
     print("buffer: ", buff)
-    for i, field in enumerate(fields):
-        if field[-1][0] == "i":
-            sign = True
-        else:
-            sign = False # use this if neccessary (add to value list)
-        
+    for i, field in enumerate(fields):        
         match field[-1][-1]:
             case '8':
                 length = 1
@@ -71,13 +70,12 @@ def transform_message(buff : list):
             
         value = buff[pointer:pointer+length]
         print("field: ", field, " value: ", value)
+        header_data.append([field, value])
         pointer += length
     # --------------- HEADER ASSEMBLED
         
     additional_start_pointer = 27 # TODO: THIS SHOULD BE CALCULATED BASED ON STRUCT IN LOADED CONFIG
     while 1:
-    
-        # TODO: ADD SWICH FOR DIFF ADDITIONAL DATA TYPES (1 / 5 / 6 / 7 / 0x20)
         allowed_types = ["0x01", "0x05", "0x06", "0x07", "0x20"]
         if not(buff[additional_start_pointer] in allowed_types):
             print("No additional data.. ending parsing message")
@@ -85,13 +83,12 @@ def transform_message(buff : list):
 
         add_type = buff[additional_start_pointer]
         add_leng = int(buff[additional_start_pointer+1], 0)
-        print("add type: ", add_type)
-        print("add leng: ", add_leng)
 
         match add_type:
             case "0x01": # Board type 1 sensors
                 data = buff[additional_start_pointer+2:additional_start_pointer+2+add_leng]
                 print("data (", add_type, " - sensor data):", data)
+                additional_data.append([add_type, data])
             case "0x05": # Packet number
                 pass
             case "0x06": # Time stamp
@@ -103,16 +100,21 @@ def transform_message(buff : list):
                 print("data (", add_type, " - node name):", data)
                 ascii_chars = ''.join([chr(int(hex_val, 16)) for hex_val in data])
                 print("\n Node name: ", ascii_chars)
+                additional_data.append([add_type, data])
 
         additional_start_pointer += 2 + add_leng # increment pointer to the next add field types
         if(additional_start_pointer >= len(buff)):
             break
+    
+
 
     print("\nFINISHED PARSING MESSAGE.\n")
+    # AT THIS POINT, MESSAGE IS PARSED, PASS IT
+    print("passing: ")
+    print("header data: \n", header_data)
+    print("\n additional data: \n", additional_data)
+    return [header_data, additional_data]
             
-
-
-
 
 def parse():
     prev_byte_start = None
@@ -126,8 +128,7 @@ def parse():
                 print("current x: ", x)
                 
                 if prev_byte_start == '0x10' and x == '0x02':
-                    
-                    # ALL THE FOLLOWING BYTES UNTIL 0x10 x03 ARE DATA TO STORE
+                
                     while 1:
                         if x:
                             if(type(x) != str):
@@ -142,13 +143,14 @@ def parse():
                             x=ser.read()
 
                     #print("ended loading data")
-                    transform_message(buffer[1:-2])
+                    to_send = transform_message(buffer[1:-2])
+                    # SEND DATA HERE TO ANOTHER THREAD?
+
+
                     buffer.clear()
-                    
-            
+                
             prev_byte_start = x
                  
-        
 if __name__ == "__main__":
     print(f"{PORT} opened: ", ser.is_open)
     print("connected to: " + ser.portstr)
