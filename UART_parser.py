@@ -2,20 +2,10 @@ import serial
 import string
 import argparse
 import xml.etree.ElementTree as ET
-from multiprocessing import Process,Pipe
 
 PORT = "COM3"
 BAUDRATE = 38400
 PRINTABLE_CHARS = bytes(string.printable, 'ascii')
-
-ser = serial.Serial(
-        port=PORT,
-        baudrate = BAUDRATE,
-        parity=serial.PARITY_NONE,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS,
-        timeout=0
-)
 
 def load_config(xml_template_file ="default.xml") -> list:
     # Read the XML template from the file
@@ -31,7 +21,7 @@ def load_config(xml_template_file ="default.xml") -> list:
     return fields
 
 
-def sniff() -> None:
+def sniff(ser) -> None:
     while 1:
             x=ser.read()
             if x:
@@ -102,7 +92,7 @@ def transform_message(buff : list) -> list:
                 print("\n Node name: ", ascii_chars)
                 additional_data.append([add_type, data])
 
-        additional_start_pointer += 2 + add_leng # increment pointer to the next add field types
+        additional_start_pointer += 2 + add_leng # increment pointer to the next addi field types
         if(additional_start_pointer >= len(buff)):
             break
     
@@ -116,7 +106,8 @@ def transform_message(buff : list) -> list:
     return [header_data, additional_data]
             
 
-def parse():
+def parse(ser_settings, pipe):
+    ser = serial.Serial(**ser_settings)
     prev_byte_start = None
     prev_byte_end = None
     buffer = []
@@ -126,7 +117,6 @@ def parse():
             if x:
                 x = pre_parse(x)
                 print("current x: ", x)
-                
                 if prev_byte_start == '0x10' and x == '0x02':
                 
                     while 1:
@@ -144,14 +134,28 @@ def parse():
 
                     #print("ended loading data")
                     to_send = transform_message(buffer[1:-2])
+                    send_data_to_gui(to_send, pipe)
                     # SEND DATA HERE TO ANOTHER THREAD?
 
 
                     buffer.clear()
                 
             prev_byte_start = x
-                 
+
+
+def send_data_to_gui(data, gui_pipe):
+    gui_pipe.send(data)
+
 if __name__ == "__main__":
+    ser = serial.Serial(
+        port=PORT,
+        baudrate = BAUDRATE,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        bytesize=serial.EIGHTBITS,
+        timeout=0
+    )
+
     print(f"{PORT} opened: ", ser.is_open)
     print("connected to: " + ser.portstr)
 
@@ -159,6 +163,6 @@ if __name__ == "__main__":
     parser.add_argument("--listen", type=str, default="true")
     args = parser.parse_args()
     if args.listen.lower() == "true":
-        sniff()
+        sniff(ser)
     else:
-        parse()
+        parse(ser)
