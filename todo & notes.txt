@@ -1,7 +1,4 @@
-TODO: DATA PARSING FROM UART IN PYTHON
 TODO: HAVE MULTIPLE CONFIGS AVAILABLE, WHICH WILL CHANGE HOW THE DATA WILL BE PARSED (for more see WSNMonitor/protocol/wsndemo_base.xml)
-TODO: CHECK INTO appInit() in WSNDemo.c, try to decode what is being send
-
 
 
 NOTES:
@@ -17,3 +14,11 @@ https://ww1.microchip.com/downloads/en/Appnotes/atmel-42619-wsnmonitor-communica
 
 MESSAGE FORMAT
 0x10 0x02 | message | 0x10 0x03 | checksum (1B)
+
+GRAPH NOTES:
+    - build a set with nodes and incrementally re-build it using new_data_incoming()
+    - when set changes, call update() on current graph.
+        - check if there is any difference (if set changes, then it should)
+        - add or remove nodes (do changes)
+    - replot graph into main gui
+    

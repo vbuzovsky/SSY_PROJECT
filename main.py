@@ -61,7 +61,7 @@ class Worker(QRunnable):
             self.signals.result.emit(data)
 
 class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=10, height=20, dpi=100):
+    def __init__(self, parent=None, width=100, height=100, dpi=100):
         super(MplCanvas, self).__init__(Figure(figsize=(width, height), dpi=dpi))
         self.setParent(parent)
         self.ax = self.figure.add_subplot(111)
@@ -108,14 +108,14 @@ class MainWindow(QMainWindow):
 
         self.threadpool = QThreadPool()
 
-    def progress_fn(self, data):
+    def new_data_incoming(self, data):
         # Update QTextEdit with the received data
         self.text_area.append(str(data))  
 
     def work(self):
         # Pass the function to execute
         worker = Worker(parse) 
-        worker.signals.progress.connect(self.progress_fn)
+        worker.signals.progress.connect(self.new_data_incoming)
 
         # Execute
         self.threadpool.start(worker)
