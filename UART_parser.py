@@ -97,7 +97,6 @@ def transform_message(buff : list) -> list:
             break
     
 
-
     print("\nFINISHED PARSING MESSAGE.\n")
     # AT THIS POINT, MESSAGE IS PARSED, PASS IT
     print("passing: ")
@@ -106,7 +105,7 @@ def transform_message(buff : list) -> list:
     return [header_data, additional_data]
             
 
-def parse(ser_settings, pipe):
+def parse(ser_settings, callback):
     ser = serial.Serial(**ser_settings)
     prev_byte_start = None
     prev_byte_end = None
@@ -132,12 +131,9 @@ def parse(ser_settings, pipe):
                             prev_byte_end = x
                             x=ser.read()
 
-                    #print("ended loading data")
+
                     to_send = transform_message(buffer[1:-2])
-                    send_data_to_gui(to_send, pipe)
-                    # SEND DATA HERE TO ANOTHER THREAD?
-
-
+                    callback.emit(to_send)
                     buffer.clear()
                 
             prev_byte_start = x
