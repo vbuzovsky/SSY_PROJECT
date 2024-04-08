@@ -1,10 +1,9 @@
-from PySide6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QMainWindow, QApplication, QTextEdit, QSplitter
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QMainWindow, QApplication, QTextEdit, QSplitter
 from PySide6.QtCore import QRunnable, Slot, Signal, QObject, QThreadPool
 from PySide6.QtCore import Qt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
-from netgraph import InteractiveGraph
-import networkx as nx
-from matplotlib.figure import Figure
+from components.canvas import MplCanvas
+from components.detail_info import DetailInfo
+from components.network_node import NetworkNode
 
 from UART_parser import parse
 
@@ -13,6 +12,30 @@ import serial
 
 PORT = "COM3"
 BAUDRATE = 38400
+RES_WIDTH = 1280
+RES_HEIGHT = 720
+
+mock_message = [
+    [
+        [('Command_ID', 'uint8'), ['0x01']],
+        [('NodeType', 'uint8'), ['0x00']], 
+        [('FullAddress', 'uint64'), ['0x00', '0x00', '0x00', '0x00', '0x00', '0x00', '0x00', '0x00']],
+        [('ShortAddress', 'uint16'), ['0x00', '0x00']],
+        [('SoftwareVersion', 'uint32'), ['0x00', '0x01', '0x01', '0x01']],
+        [('ChannelMask', 'uint32'), ['0x00', '0x80', '0x00', '0x00']],
+        [('PanID', 'uint16'), ['0x34', '0x12']], 
+        [('WorkingChannel', 'uint8'), ['0x0f']],
+        [('ParentAddress', 'uint16'), ['0xff', '0xff']],
+        [('LQI', 'uint8'), ['0x00']],
+        [('RSSI', 'int8'), ['0x00']]
+    ],
+    [
+        ['0x01', 
+            ['0x31', '0x31', '0x00', '0x00', '0xc', '0x00', '0x00', '0x00', '0xee', '0x00', '0x00', '0x00']], 
+        ['0x20', 
+            ['0x43', '0x6f', '0x6f', '0x72', '0x64', '0x69', '0x6e', '0x61', '0x74', '0x6f', '0x72']]
+    ]
+]
 
 class WorkerSignals(QObject):
     '''
@@ -60,39 +83,37 @@ class Worker(QRunnable):
             data = self.fn(ser_settings, self.signals.progress)
             self.signals.result.emit(data)
 
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=100, height=100, dpi=100):
-        super(MplCanvas, self).__init__(Figure(figsize=(width, height), dpi=dpi))
-        self.setParent(parent)
-        self.ax = self.figure.add_subplot(111)
-        graph = nx.house_x_graph()
-        self.plot_instance = InteractiveGraph(graph, ax=self.ax)
 
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-        self.setFixedHeight(720)
-        self.setFixedWidth(1280)
+        self.setFixedHeight(RES_HEIGHT)
+        self.setFixedWidth(RES_WIDTH)
 
+        self.network_nodes = set()
         main_layout = QVBoxLayout()
 
         splitter = QSplitter()  
-        splitter.setOrientation(Qt.Vertical) 
+        splitter.setOrientation(Qt.Horizontal) 
 
         text_panel = QWidget()
+        text_panel.setFixedWidth(RES_WIDTH/3) 
         text_layout = QVBoxLayout()
         self.text_area = QTextEdit()
         text_layout.addWidget(self.text_area)
         text_panel.setLayout(text_layout)
 
         canvas_panel = QWidget()
+        canvas_panel.setFixedWidth(RES_WIDTH/3*2) 
         canvas_layout = QVBoxLayout()
-        self.canvas = MplCanvas(canvas_panel, width=5, height=4, dpi=100)
+        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        self.canvas = MplCanvas(canvas_panel, width=180, height=190, dpi=100)
         canvas_layout.addWidget(self.canvas)
         canvas_panel.setLayout(canvas_layout)
 
-
-        splitter.addWidget(text_panel)
+        mock_node = NetworkNode(header=mock_message[0], data=mock_message[1])
+        detail_info = DetailInfo(mock_node)
+        splitter.addWidget(detail_info)
         splitter.addWidget(canvas_panel)
 
         main_layout.addWidget(splitter)
@@ -109,8 +130,8 @@ class MainWindow(QMainWindow):
         self.threadpool = QThreadPool()
 
     def new_data_incoming(self, data):
-        # Update QTextEdit with the received data
-        self.text_area.append(str(data))  
+        potential_node = NetworkNode(header=data[0], data=data[1])
+        self.network_nodes.add(potential_node) # should not be added, if exists
 
     def work(self):
         # Pass the function to execute
