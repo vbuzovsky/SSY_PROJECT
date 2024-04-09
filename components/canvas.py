@@ -10,3 +10,5 @@ class MplCanvas(FigureCanvasQTAgg):
         self.ax = self.figure.add_subplot(111)
         graph = nx.random_internet_as_graph(50, seed=10)
         self.plot_instance = InteractiveGraph(graph, ax=self.ax)
+
+        

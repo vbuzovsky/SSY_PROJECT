@@ -37,7 +37,7 @@ mock_message = [
     ]
 ]
 
-class WorkerSignals(QObject):
+class ParseWorkerSignals(QObject):
     '''
     Defines the progress signal (from parser) used for passing around data
     
@@ -46,7 +46,7 @@ class WorkerSignals(QObject):
 
 
 
-class Worker(QRunnable):
+class ParseWorker(QRunnable):
     '''
     Worker thread
 
@@ -54,12 +54,12 @@ class Worker(QRunnable):
     '''
     
     def __init__(self, fn, *args, **kwargs):
-        super(Worker, self).__init__()
+        super(ParseWorker, self).__init__()
 
         self.fn = fn # EXEC THIS IN NEW THREAD
         self.args = args
         self.kwargs = kwargs
-        self.signals = WorkerSignals()
+        self.signals = ParseWorkerSignals()
 
         # Add the callback to our kwargs
         self.kwargs['callback'] = self.signals.progress
@@ -67,7 +67,7 @@ class Worker(QRunnable):
     @Slot()
     def run(self):
         '''
-        Initialise the runner function with passed args, kwargs.
+        Infinite loop to keep the thread running, parsing data from serial port
         '''
 
         ser_settings = {
@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
 
     def work(self):
         # Pass the function to execute
-        worker = Worker(parse) 
+        worker = ParseWorker(parse) 
         worker.signals.progress.connect(self.new_data_incoming)
 
         # Execute
