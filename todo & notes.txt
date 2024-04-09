@@ -16,9 +16,4 @@ MESSAGE FORMAT
 0x10 0x02 | message | 0x10 0x03 | checksum (1B)
 
 GRAPH NOTES:
-    - build a set with nodes and incrementally re-build it using new_data_incoming()
-    - when set changes, call update() on current graph.
-        - check if there is any difference (if set changes, then it should)
-        - add or remove nodes (do changes)
-    - replot graph into main gui
-    
+    - have a thread that re-build and re-prints the graph each 5 or 10s from the network_nodes set

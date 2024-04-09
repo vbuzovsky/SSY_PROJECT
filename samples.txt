@@ -1,4 +1,4 @@
-COORDINATOR PERIOD MESSAGE
+ PERIODIC MESSAGE
 ------------- start sequence
 0x10
 0x02

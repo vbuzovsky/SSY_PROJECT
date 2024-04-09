@@ -8,7 +8,9 @@ from components.network_node import NetworkNode
 from UART_parser import parse
 
 import sys
+import time
 import serial
+from graph import NetworkGraph
 
 PORT = "COM3"
 BAUDRATE = 38400
@@ -37,11 +39,47 @@ mock_message = [
     ]
 ]
 
+class PrintWorkerSignals(QObject):
+    '''
+    Defines the signal for printing the current state of network nodes
+    '''
+    finished = Signal()
+    print_nodes = Signal(set)
+
+class PrintWorker(QRunnable):
+    '''
+    Worker thread for periodically printing the current state of network nodes
+
+    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
+    '''
+    
+    def __init__(self, nodes, *args, **kwargs):
+        super(PrintWorker, self).__init__()
+        self._is_running = True
+        self.nodes = nodes
+        self.signals = PrintWorkerSignals()
+
+    @Slot()
+    def run(self):
+        '''
+        Infinite loop to keep the thread running, printing current state of network nodes
+        '''
+        while self._is_running:
+            self.signals.print_nodes.emit(self.nodes)
+            time.sleep(5)
+
+        self.signals.finished.emit()  # Done
+    
+    def stop(self):
+        self._is_running = False
+
+
 class ParseWorkerSignals(QObject):
     '''
     Defines the progress signal (from parser) used for passing around data
     
     '''
+    finished = Signal()
     progress = Signal(list)
 
 
@@ -55,7 +93,7 @@ class ParseWorker(QRunnable):
     
     def __init__(self, fn, *args, **kwargs):
         super(ParseWorker, self).__init__()
-
+        self._is_running = True
         self.fn = fn # EXEC THIS IN NEW THREAD
         self.args = args
         self.kwargs = kwargs
@@ -79,9 +117,14 @@ class ParseWorker(QRunnable):
             "timeout": 0
         }
 
-        while True:
+        while self._is_running:
             data = self.fn(ser_settings, self.signals.progress)
             self.signals.result.emit(data)
+
+        self.signals.finished.emit()
+
+    def stop(self):
+        self._is_running = False
 
 
 class MainWindow(QMainWindow):
@@ -107,7 +150,10 @@ class MainWindow(QMainWindow):
         canvas_panel.setFixedWidth(RES_WIDTH/3*2) 
         canvas_layout = QVBoxLayout()
         canvas_layout.setContentsMargins(0, 0, 0, 0)
-        self.canvas = MplCanvas(canvas_panel, width=180, height=190, dpi=100)
+
+        self.network_graph = NetworkGraph()
+
+        self.canvas = MplCanvas(canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G)
         canvas_layout.addWidget(self.canvas)
         canvas_panel.setLayout(canvas_layout)
 
@@ -118,9 +164,14 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(splitter)
 
-        self.button = QPushButton("Start Work")
-        self.button.clicked.connect(self.work)
-        main_layout.addWidget(self.button)
+        self.start_button = QPushButton("Start Work")
+        self.start_button.clicked.connect(self.work)
+        main_layout.addWidget(self.start_button)
+
+        self.stop_button = QPushButton("Stop Work")
+        self.stop_button.clicked.connect(self.stop_work)
+        main_layout.addWidget(self.stop_button)
+        self.stop_button.setEnabled(False)  # Initially disable stop button
 
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
@@ -130,16 +181,44 @@ class MainWindow(QMainWindow):
         self.threadpool = QThreadPool()
 
     def new_data_incoming(self, data):
-        potential_node = NetworkNode(header=data[0], data=data[1])
+        # CLUMSY CHECK IF NO ADDITIONAL DATA TODO: TEST THIS
+        if len(data) == 1:
+            potential_node = NetworkNode(header=data[0], data=None)
+        else:
+            potential_node = NetworkNode(header=data[0], data=data[1])
         self.network_nodes.add(potential_node) # should not be added, if exists
 
     def work(self):
+        # Disable start button and enable stop button
+        self.start_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
         # Pass the function to execute
-        worker = ParseWorker(parse) 
-        worker.signals.progress.connect(self.new_data_incoming)
+        self.parse_worker = ParseWorker(parse) 
+        self.parse_worker.signals.progress.connect(self.new_data_incoming)
+
+        self.print_worker = PrintWorker(self.network_nodes)
+        self.print_worker.signals.print_nodes.connect(self.print_nodes_state)
+
 
         # Execute
-        self.threadpool.start(worker)
+        self.threadpool.start(self.parse_worker)
+        self.threadpool.start(self.print_worker)
+
+    def print_nodes_state(self, nodes):
+        print("Current state of network nodes:")
+        for node in nodes:
+            print(node)
+        print("\nRebuiling graph...")
+        self.network_graph.re_build_graph(nodes)
+
+    # TODO: THIS DOESNT WORK AT ALL, STILL RUNNING AFTER STOP CLICKED
+    def stop_work(self):
+        self.parse_worker.stop()
+        self.print_worker.stop()
+
+        # Enable start button and disable stop button
+        self.start_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
 
 
 app = QApplication(sys.argv)

@@ -96,16 +96,10 @@ def transform_message(buff : list) -> list:
         if(additional_start_pointer >= len(buff)):
             break
     
-
-    print("\nFINISHED PARSING MESSAGE.\n")
-    # AT THIS POINT, MESSAGE IS PARSED, PASS IT
-    print("passing: ")
-    print("header data: \n", header_data)
-    print("\n additional data: \n", additional_data)
     return [header_data, additional_data]
             
 
-def parse(ser_settings, callback):
+def parse(ser_settings, callback=None):
     ser = serial.Serial(**ser_settings)
     prev_byte_start = None
     prev_byte_end = None
@@ -133,7 +127,8 @@ def parse(ser_settings, callback):
 
 
                     to_send = transform_message(buffer[1:-2])
-                    callback.emit(to_send)
+                    if callback:
+                        callback.emit(to_send)
                     buffer.clear()
                 
             prev_byte_start = x
@@ -143,22 +138,22 @@ def send_data_to_gui(data, gui_pipe):
     gui_pipe.send(data)
 
 if __name__ == "__main__":
-    ser = serial.Serial(
-        port=PORT,
-        baudrate = BAUDRATE,
-        parity=serial.PARITY_NONE,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS,
-        timeout=0
-    )
+    ser_settings = {
+        "port": PORT,
+        "baudrate": BAUDRATE,
+        "parity": serial.PARITY_NONE,
+        "stopbits": serial.STOPBITS_ONE,
+        "bytesize": serial.EIGHTBITS,
+        "timeout": 0
+    }
 
-    print(f"{PORT} opened: ", ser.is_open)
-    print("connected to: " + ser.portstr)
+
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--listen", type=str, default="true")
     args = parser.parse_args()
     if args.listen.lower() == "true":
-        sniff(ser)
+        #sniff(ser)
+        pass
     else:
-        parse(ser)
+        parse(ser_settings)
