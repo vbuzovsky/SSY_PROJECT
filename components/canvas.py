@@ -7,6 +7,12 @@ class MplCanvas(FigureCanvasQTAgg):
         super(MplCanvas, self).__init__(Figure(figsize=(width, height), dpi=dpi, constrained_layout=True))
         self.setParent(parent)
         self.ax = self.figure.add_subplot(111)
-        self.plot_instance = InteractiveGraph(graph, ax=self.ax)
+        self.graph = graph
+        self.plot_instance = None
+        self.update_graph(graph)
 
-        
+    def update_graph(self, graph):
+        if self.plot_instance is not None:
+            self.ax.clear() 
+        self.plot_instance = InteractiveGraph(graph, ax=self.ax)
+        self.figure.canvas.draw_idle()  # Redraw the canvas

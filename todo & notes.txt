@@ -15,5 +15,5 @@ https://ww1.microchip.com/downloads/en/Appnotes/atmel-42619-wsnmonitor-communica
 MESSAGE FORMAT
 0x10 0x02 | message | 0x10 0x03 | checksum (1B)
 
-GRAPH NOTES:
-    - have a thread that re-build and re-prints the graph each 5 or 10s from the network_nodes set
+STACK:
+https://stackoverflow.com/questions/72197530/clickable-netgraph-in-pyqt-application-with-tabs

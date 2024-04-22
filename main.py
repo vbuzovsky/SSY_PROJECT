@@ -150,20 +150,23 @@ class MainWindow(QMainWindow):
         text_layout.addWidget(self.text_area)
         text_panel.setLayout(text_layout)
 
-        canvas_panel = QWidget()
-        canvas_panel.setFixedWidth(RES_WIDTH/3*2) 
-        canvas_layout = QVBoxLayout()
-        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        self.canvas_panel = QWidget()
+        self.canvas_panel.setFixedWidth(RES_WIDTH/3*2) 
+        self.canvas_layout = QVBoxLayout()
+        self.canvas_layout.setContentsMargins(0, 0, 0, 0)
 
         self.network_graph = NetworkGraph()
-        self.canvas = MplCanvas(canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G)
-        canvas_layout.addWidget(self.canvas)
-        canvas_panel.setLayout(canvas_layout)
+        self.network_graph.G.add_node(1)
+        self.network_graph.G.add_node(2)
+        self.network_graph.G.add_edge(1, 2)
+        self.canvas = MplCanvas(self.canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G)
+        self.canvas_layout.addWidget(self.canvas)
+        self.canvas_panel.setLayout(self.canvas_layout)
 
         mock_node = NetworkNode(header=mock_message[0], data=mock_message[1])
         detail_info = DetailInfo(mock_node)
         splitter.addWidget(detail_info)
-        splitter.addWidget(canvas_panel)
+        splitter.addWidget(self.canvas_panel)
 
         main_layout.addWidget(splitter)
 
@@ -203,7 +206,7 @@ class MainWindow(QMainWindow):
         self.parse_worker = ParseWorker(parse) 
         self.parse_worker.signals.progress.connect(self.new_data_incoming)
 
-        self.print_worker = PrintWorker(self.network_nodes)
+        self.print_worker = PrintWorker(self.network_graph.get_nodes())
         self.print_worker.signals.print_nodes.connect(self.print_nodes_state)
 
 
@@ -212,11 +215,14 @@ class MainWindow(QMainWindow):
         self.threadpool.start(self.print_worker)
 
     def print_nodes_state(self, nodes):
+        new_graph = NetworkGraph()
+        for node in nodes:
+            new_graph.add_node(node, {"someinfo": "idk"})
         print("Current state of network nodes:")
         for node in nodes:
             print(node)
         print("\nRebuiling graph...")
-        self.network_graph.re_build_graph(nodes)
+        self.canvas.update_graph(new_graph.G)
 
     # TODO: THIS DOESNT WORK AT ALL, STILL RUNNING AFTER STOP CLICKED
     def stop_work(self):
