@@ -26,7 +26,7 @@ class DetailInfo(QWidget):
                 self.add_label(additional_info_dict[additional_info[0]], str(self.hex_to_dec(additional_info[1])))
             
 
-    # TODO: this and few other methods maybe belond to the NetworkNode class
+    # TODO this and few other methods maybe belond to the NetworkNode class
     def hex_to_dec(self, hex_list):
         return [int(x, 16) for x in hex_list]
 
@@ -34,7 +34,7 @@ class DetailInfo(QWidget):
         label = QLabel(label_text)
         line_edit = QLineEdit(data)
         line_edit.setReadOnly(True)
-
+        
         hbox = QHBoxLayout()
         hbox.addWidget(label)
         hbox.addWidget(line_edit)

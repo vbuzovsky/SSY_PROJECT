@@ -6,6 +6,8 @@ from components.detail_info import DetailInfo
 from components.network_node import NetworkNode
 
 from UART_parser import parse
+from helpers.config_helper import get_config_dict
+from helpers.parse_output_into_nodeinfo import build_node_information
 
 import sys
 import time
@@ -66,10 +68,12 @@ class PrintWorker(QRunnable):
         '''
         while self._is_running:
             self.signals.print_nodes.emit(self.nodes)
-            time.sleep(5)
+            time.sleep(10)
+            # TODO: THIS IS WHERE THE GRAPH SHOULD BE "REBUIL"
 
         self.signals.finished.emit()  # Done
     
+    @Slot()
     def stop(self):
         self._is_running = False
 
@@ -123,6 +127,7 @@ class ParseWorker(QRunnable):
 
         self.signals.finished.emit()
 
+    @Slot()
     def stop(self):
         self._is_running = False
 
@@ -133,7 +138,6 @@ class MainWindow(QMainWindow):
         self.setFixedHeight(RES_HEIGHT)
         self.setFixedWidth(RES_WIDTH)
 
-        self.network_nodes = set()
         main_layout = QVBoxLayout()
 
         splitter = QSplitter()  
@@ -152,7 +156,6 @@ class MainWindow(QMainWindow):
         canvas_layout.setContentsMargins(0, 0, 0, 0)
 
         self.network_graph = NetworkGraph()
-
         self.canvas = MplCanvas(canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G)
         canvas_layout.addWidget(self.canvas)
         canvas_panel.setLayout(canvas_layout)
@@ -181,13 +184,17 @@ class MainWindow(QMainWindow):
         self.threadpool = QThreadPool()
 
     def new_data_incoming(self, data):
-        # CLUMSY CHECK IF NO ADDITIONAL DATA TODO: TEST THIS
-        if len(data) == 1:
-            potential_node = NetworkNode(header=data[0], data=None)
-        else:
-            potential_node = NetworkNode(header=data[0], data=data[1])
-        self.network_nodes.add(potential_node) # should not be added, if exists
+        node_info = build_node_information(data)
+        full_address = node_info["FullAddress"]
+        if full_address not in self.network_graph.get_nodes():
+            self.network_graph.add_node(full_address, node_info)
 
+        # TODO: THIS NEED FIXING
+        # PARENT ADDR IS 2B FULL IS 8B THIS WONT WORK
+        if node_info["ParentAddress"] in self.network_graph.get_nodes():
+            self.network_graph.add_edge(full_address, node_info["ParentAddress"])
+    
+        
     def work(self):
         # Disable start button and enable stop button
         self.start_button.setEnabled(False)

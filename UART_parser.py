@@ -1,25 +1,11 @@
 import serial
 import string
 import argparse
-import xml.etree.ElementTree as ET
+from helpers.config_helper import load_config
 
 PORT = "COM3"
 BAUDRATE = 38400
 PRINTABLE_CHARS = bytes(string.printable, 'ascii')
-
-def load_config(xml_template_file ="default.xml") -> list:
-    # Read the XML template from the file
-    with open(xml_template_file, 'r') as file:
-        xml_template = file.read()
-
-    fields = []
-    for child in ET.fromstring(xml_template):
-        field_name = child.get("name")
-        field_type = child.get("type")
-        fields.append((field_name, field_type))
-
-    return fields
-
 
 def sniff(ser) -> None:
     while 1:

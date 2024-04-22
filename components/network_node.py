@@ -1,6 +1,6 @@
 
 class NetworkNode:
-    def __init__(self, header, data):
+    def __init__(self, header : list, data):
         self.header = header
         self.data = data
 
