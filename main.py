@@ -19,6 +19,7 @@ BAUDRATE = 38400
 RES_WIDTH = 1280
 RES_HEIGHT = 720
 
+
 mock_message = [
     [
         [('Command_ID', 'uint8'), ['0x01']],
@@ -48,7 +49,7 @@ class PrintWorkerSignals(QObject):
     finished = Signal()
     print_nodes = Signal(set)
 
-class PrintWorker(QRunnable):
+class GraphRebuildWorker(QRunnable):
     '''
     Worker thread for periodically printing the current state of network nodes
 
@@ -56,7 +57,7 @@ class PrintWorker(QRunnable):
     '''
     
     def __init__(self, nodes, *args, **kwargs):
-        super(PrintWorker, self).__init__()
+        super(GraphRebuildWorker, self).__init__()
         self._is_running = True
         self.nodes = nodes
         self.signals = PrintWorkerSignals()
@@ -69,7 +70,6 @@ class PrintWorker(QRunnable):
         while self._is_running:
             self.signals.print_nodes.emit(self.nodes)
             time.sleep(10)
-            # TODO: THIS IS WHERE THE GRAPH SHOULD BE "REBUIL"
 
         self.signals.finished.emit()  # Done
     
@@ -85,7 +85,6 @@ class ParseWorkerSignals(QObject):
     '''
     finished = Signal()
     progress = Signal(list)
-
 
 
 class ParseWorker(QRunnable):
@@ -140,6 +139,8 @@ class MainWindow(QMainWindow):
 
         main_layout = QVBoxLayout()
 
+        self.node_set = set()
+
         splitter = QSplitter()  
         splitter.setOrientation(Qt.Horizontal) 
 
@@ -156,9 +157,10 @@ class MainWindow(QMainWindow):
         self.canvas_layout.setContentsMargins(0, 0, 0, 0)
 
         self.network_graph = NetworkGraph()
-        self.network_graph.G.add_node(1)
-        self.network_graph.G.add_node(2)
-        self.network_graph.G.add_edge(1, 2)
+        self.network_graph.G.add_node("1")
+
+        self.previous_graph_nodes = self.network_graph.get_nodes()
+
         self.canvas = MplCanvas(self.canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G)
         self.canvas_layout.addWidget(self.canvas)
         self.canvas_panel.setLayout(self.canvas_layout)
@@ -188,14 +190,19 @@ class MainWindow(QMainWindow):
 
     def new_data_incoming(self, data):
         node_info = build_node_information(data)
-        full_address = node_info["FullAddress"]
-        if full_address not in self.network_graph.get_nodes():
-            self.network_graph.add_node(full_address, node_info)
+        short_address = node_info["ShortAddress"]
+        if short_address not in self.network_graph.get_nodes():
+            if("1" in self.network_graph.get_nodes()): #TODO: awful hack to remove inital node, graph cannot be printed with no nodes. needs fix
+                self.network_graph.G.remove_node("1")
+            self.network_graph.add_node(short_address, node_info)
+            if(node_info['ParentAddress'] == "ffff" and node_info['ShortAddress'] != "0000"):
+                self.network_graph.G.add_edge(short_address, "0000") # autoconnect to coordinator
 
-        # TODO: THIS NEED FIXING
-        # PARENT ADDR IS 2B FULL IS 8B THIS WONT WORK
+        print("CURRENT ADDRESS: ", node_info['ShortAddress'])
+        print("\nPARENT ADDRESS: ", node_info['ParentAddress'])
+
         if node_info["ParentAddress"] in self.network_graph.get_nodes():
-            self.network_graph.add_edge(full_address, node_info["ParentAddress"])
+            self.network_graph.add_edge(short_address, node_info["ParentAddress"])
     
         
     def work(self):
@@ -206,23 +213,20 @@ class MainWindow(QMainWindow):
         self.parse_worker = ParseWorker(parse) 
         self.parse_worker.signals.progress.connect(self.new_data_incoming)
 
-        self.print_worker = PrintWorker(self.network_graph.get_nodes())
-        self.print_worker.signals.print_nodes.connect(self.print_nodes_state)
+        self.print_worker = GraphRebuildWorker(self.network_graph)
+        self.print_worker.signals.print_nodes.connect(self.rebuild_graph)
 
 
         # Execute
         self.threadpool.start(self.parse_worker)
         self.threadpool.start(self.print_worker)
 
-    def print_nodes_state(self, nodes):
-        new_graph = NetworkGraph()
-        for node in nodes:
-            new_graph.add_node(node, {"someinfo": "idk"})
-        print("Current state of network nodes:")
-        for node in nodes:
-            print(node)
-        print("\nRebuiling graph...")
-        self.canvas.update_graph(new_graph.G)
+    def rebuild_graph(self, graph):
+
+            for node in graph.get_nodes():
+                print("Node: ", node)
+            print("\nRebuiling graph...")
+            self.canvas.update_graph(graph.G)
 
     # TODO: THIS DOESNT WORK AT ALL, STILL RUNNING AFTER STOP CLICKED
     def stop_work(self):

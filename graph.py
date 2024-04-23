@@ -17,7 +17,6 @@ class NetworkGraph():
     def add_edge(self, address1 : str, address2 : str):
         self.G.add_edge(address1, address2)
 
-    # get_nodes and edges are not needed ?
     def get_nodes(self):
         return self.G.nodes
     

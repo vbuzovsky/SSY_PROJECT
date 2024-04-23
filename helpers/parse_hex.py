@@ -1,10 +1,6 @@
-def hex_to_dec_str(hex_list : list) -> str:
-    decimal_string = ""
-    for hex_value in hex_list:
-        # Remove "0x" prefix and convert to decimal
-        decimal_value = int(hex_value, 16)
-        # Append the decimal value to the string
-        decimal_string += str(decimal_value)
-    return decimal_string
-
+def hex_to_dec_str(hex_list: list) -> str:
+    hex_string = ""
+    for hex_value in reversed(hex_list):
+        hex_string += hex_value[2:]
+    return hex_string
 
