@@ -7,6 +7,8 @@ icons = {
     "end_device": "misc/end_device.png",
 }
 
+
+# TODO: UNFINISHED "LAYER" ABOVE nx.Graph() object, PROBABLY REDUNDANT
 class NetworkGraph():
     def __init__(self):
         self.G = nx.Graph()

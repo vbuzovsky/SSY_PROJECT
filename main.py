@@ -20,47 +20,16 @@ RES_WIDTH = 1280
 RES_HEIGHT = 720
 
 
-mock_message = [
-    [
-        [('Command_ID', 'uint8'), ['0x01']],
-        [('NodeType', 'uint8'), ['0x00']], 
-        [('FullAddress', 'uint64'), ['0x00', '0x00', '0x00', '0x00', '0x00', '0x00', '0x00', '0x00']],
-        [('ShortAddress', 'uint16'), ['0x00', '0x00']],
-        [('SoftwareVersion', 'uint32'), ['0x00', '0x01', '0x01', '0x01']],
-        [('ChannelMask', 'uint32'), ['0x00', '0x80', '0x00', '0x00']],
-        [('PanID', 'uint16'), ['0x34', '0x12']], 
-        [('WorkingChannel', 'uint8'), ['0x0f']],
-        [('ParentAddress', 'uint16'), ['0xff', '0xff']],
-        [('LQI', 'uint8'), ['0x00']],
-        [('RSSI', 'int8'), ['0x00']]
-    ],
-    [
-        ['0x01', 
-            ['0x31', '0x31', '0x00', '0x00', '0xc', '0x00', '0x00', '0x00', '0xee', '0x00', '0x00', '0x00']], 
-        ['0x20', 
-            ['0x43', '0x6f', '0x6f', '0x72', '0x64', '0x69', '0x6e', '0x61', '0x74', '0x6f', '0x72']]
-    ]
-]
-
-class PrintWorkerSignals(QObject):
-    '''
-    Defines the signal for printing the current state of network nodes
-    '''
+class GraphRebuilderSignals(QObject):
     finished = Signal()
     print_nodes = Signal(set)
 
 class GraphRebuildWorker(QRunnable):
-    '''
-    Worker thread for periodically printing the current state of network nodes
-
-    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
-    '''
-    
     def __init__(self, nodes, *args, **kwargs):
         super(GraphRebuildWorker, self).__init__()
         self._is_running = True
         self.nodes = nodes
-        self.signals = PrintWorkerSignals()
+        self.signals = GraphRebuilderSignals()
 
     @Slot()
     def run(self):
@@ -79,21 +48,11 @@ class GraphRebuildWorker(QRunnable):
 
 
 class ParseWorkerSignals(QObject):
-    '''
-    Defines the progress signal (from parser) used for passing around data
-    
-    '''
     finished = Signal()
     progress = Signal(list)
 
 
 class ParseWorker(QRunnable):
-    '''
-    Worker thread
-
-    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
-    '''
-    
     def __init__(self, fn, *args, **kwargs):
         super(ParseWorker, self).__init__()
         self._is_running = True
@@ -139,7 +98,7 @@ class MainWindow(QMainWindow):
 
         main_layout = QVBoxLayout()
 
-        self.node_set = set()
+        self.prev_graph = None
 
         splitter = QSplitter()  
         splitter.setOrientation(Qt.Horizontal) 
@@ -156,17 +115,19 @@ class MainWindow(QMainWindow):
         self.canvas_layout = QVBoxLayout()
         self.canvas_layout.setContentsMargins(0, 0, 0, 0)
 
+        detail_info = DetailInfo()
+
         self.network_graph = NetworkGraph()
         self.network_graph.G.add_node("1")
 
         self.previous_graph_nodes = self.network_graph.get_nodes()
 
-        self.canvas = MplCanvas(self.canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G)
+        self.canvas = MplCanvas(self.canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G, update_info=detail_info)
         self.canvas_layout.addWidget(self.canvas)
         self.canvas_panel.setLayout(self.canvas_layout)
 
-        mock_node = NetworkNode(header=mock_message[0], data=mock_message[1])
-        detail_info = DetailInfo(mock_node)
+        
+        
         splitter.addWidget(detail_info)
         splitter.addWidget(self.canvas_panel)
 
@@ -198,8 +159,8 @@ class MainWindow(QMainWindow):
             if(node_info['ParentAddress'] == "ffff" and node_info['ShortAddress'] != "0000"):
                 self.network_graph.G.add_edge(short_address, "0000") # autoconnect to coordinator
 
-        print("CURRENT ADDRESS: ", node_info['ShortAddress'])
-        print("\nPARENT ADDRESS: ", node_info['ParentAddress'])
+        #print("CURRENT ADDRESS: ", node_info['ShortAddress'])
+        #print("\nPARENT ADDRESS: ", node_info['ParentAddress'])
 
         if node_info["ParentAddress"] in self.network_graph.get_nodes():
             self.network_graph.add_edge(short_address, node_info["ParentAddress"])
@@ -222,18 +183,16 @@ class MainWindow(QMainWindow):
         self.threadpool.start(self.print_worker)
 
     def rebuild_graph(self, graph):
-
-            for node in graph.get_nodes():
-                print("Node: ", node)
-            print("\nRebuiling graph...")
-            self.canvas.update_graph(graph.G)
+        print("Rebuilding graph...")
+        self.canvas.update_graph(graph.G)
+        
+    
 
     # TODO: THIS DOESNT WORK AT ALL, STILL RUNNING AFTER STOP CLICKED
     def stop_work(self):
         self.parse_worker.stop()
         self.print_worker.stop()
 
-        # Enable start button and disable stop button
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
 

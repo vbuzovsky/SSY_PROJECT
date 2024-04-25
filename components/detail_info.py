@@ -1,42 +1,54 @@
 import sys
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QHBoxLayout
 
-additional_info_dict = {
-    '0x01': "Board type 1 sensors",
-    '0x05': "Packet number",
-    '0x06': "Time stamp",
-    '0x07': "Active period",
-    '0x20': "Node name"
-}
 
 class DetailInfo(QWidget):
-    def __init__(self, node):
+    def __init__(self):
         super().__init__()
-        self.node = node
         layout = QVBoxLayout()
         self.setLayout(layout)
-
-        for node_info in node.header:
-            if not node_info[0][0] == 'Command_ID':
-                self.add_label(str(node_info[0][0]), str(self.hex_to_dec(node_info[1])))
-
-        # TODO: DIFFERENTIATE BETWEEN TYPES, PARSE THEM DIFFERENTLY BASED ON COMMUNITY NOTES
-        for additional_info in node.data:
-            if additional_info[0] in additional_info_dict:
-                self.add_label(additional_info_dict[additional_info[0]], str(self.hex_to_dec(additional_info[1])))
-            
-
-    # TODO this and few other methods maybe belond to the NetworkNode class
-    def hex_to_dec(self, hex_list):
-        return [int(x, 16) for x in hex_list]
+        self.labels = {}
 
     def add_label(self, label_text, data):
-        label = QLabel(label_text)
-        line_edit = QLineEdit(data)
-        line_edit.setReadOnly(True)
-        
-        hbox = QHBoxLayout()
-        hbox.addWidget(label)
-        hbox.addWidget(line_edit)
+        if label_text in self.labels:
+            line_edit = self.labels[label_text]
+            line_edit.setText(data)
+        else:
+            label = QLabel(label_text)
+            line_edit = QLineEdit(data)
+            line_edit.setReadOnly(True)
+            hbox = QHBoxLayout()
+            hbox.addWidget(label)
+            hbox.addWidget(line_edit)
+            self.layout().addLayout(hbox)
+            self.labels[label_text] = line_edit
 
-        self.layout().addLayout(hbox)
+    def name_to_ascii(self, hex_string):
+        ascii_string = ""
+        for i in range(0, len(hex_string), 2):
+            hex_char = hex_string[i:i+2]
+            ascii_char = chr(int(hex_char, 16))
+            ascii_string += ascii_char
+        return ascii_string[::-1]  
+
+    def update_detail_info(self, event, plot_instance, graph):
+        print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+                ('double' if event.dblclick else 'single', event.button,
+                event.x, event.y, event.xdata, event.ydata))
+        x = event.xdata
+        y = event.ydata
+        clicked_node = None
+        for node_id, node_artist in plot_instance.node_artists.items():
+            dist = ((x - node_artist.xy[0])**2 + (y - node_artist.xy[1])**2)**0.5
+            if dist < node_artist.radius:
+                clicked_node = node_id
+                break
+
+        if clicked_node is not None:
+            #print("Clicked node:", clicked_node)
+            node_info = graph.nodes[clicked_node]
+            #print("Additional info:", node_info)  
+            for key, value in node_info.items():
+                if(key == "Node name"):
+                    value = self.name_to_ascii(value)
+                self.add_label(key, value)
