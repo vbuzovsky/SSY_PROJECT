@@ -19,7 +19,7 @@ RES_HEIGHT = 720
 
 class GraphRebuilderSignals(QObject):
     finished = Signal()
-    print_nodes = Signal(set)
+    force_rebuild = Signal(set)
 
 class GraphRebuildWorker(QRunnable):
     def __init__(self, nodes, *args, **kwargs):
@@ -31,7 +31,7 @@ class GraphRebuildWorker(QRunnable):
     @Slot()
     def run(self):
         while self._is_running:
-            self.signals.print_nodes.emit(self.nodes)
+            self.signals.force_rebuild.emit(self.nodes)
             time.sleep(10)
 
         self.signals.finished.emit()  # Done
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
         self.parse_worker.signals.progress.connect(self.new_data_incoming)
 
         self.print_worker = GraphRebuildWorker(self.network_graph)
-        self.print_worker.signals.print_nodes.connect(self.rebuild_graph)
+        self.print_worker.signals.force_rebuild.connect(self.rebuild_graph)
 
         self.threadpool.start(self.parse_worker)
         self.threadpool.start(self.print_worker)

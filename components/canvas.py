@@ -12,7 +12,6 @@ class MplCanvas(FigureCanvasQTAgg):
         self.update_info = update_info
         self.plot_instance = None
         self.update_graph(graph)
-        self.click_thread = None
 
     def update_graph(self, graph):
         if self.plot_instance is not None:

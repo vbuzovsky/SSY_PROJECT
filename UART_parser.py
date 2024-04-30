@@ -120,10 +120,6 @@ def parse(ser_settings, callback=None):
                 
             prev_byte_start = x
 
-
-def send_data_to_gui(data, gui_pipe):
-    gui_pipe.send(data)
-
 if __name__ == "__main__":
     ser_settings = {
         "port": PORT,
