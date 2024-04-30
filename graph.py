@@ -1,12 +1,4 @@
 import networkx as nx
-from components.network_node import NetworkNode
-import PIL
-icons = {
-    "coordinator": "misc/coordinator.png",
-    "router": "misc/router.png",
-    "end_device": "misc/end_device.png",
-}
-
 
 # TODO: UNFINISHED "LAYER" ABOVE nx.Graph() object, PROBABLY REDUNDANT
 class NetworkGraph():

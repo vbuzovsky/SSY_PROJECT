@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QHBoxLayout
 
 
 class DetailInfo(QWidget):

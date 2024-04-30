@@ -1,8 +1,6 @@
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from netgraph import InteractiveGraph
 from matplotlib.figure import Figure
-from .detail_info import DetailInfo
-import threading
 
 class MplCanvas(FigureCanvasQTAgg):
 

@@ -45,5 +45,3 @@ def get_value_dict(xml_template_file = "default.xml") -> dict:
         value_dict[name] = value.text
     
     return value_dict
-
-print(get_value_dict())

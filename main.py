@@ -1,14 +1,11 @@
-from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QMainWindow, QApplication, QTextEdit, QSplitter
+from PySide6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QMainWindow, QApplication, QTextEdit, QSplitter
 from PySide6.QtCore import QRunnable, Slot, Signal, QObject, QThreadPool
 from PySide6.QtCore import Qt
 from components.canvas import MplCanvas
 from components.detail_info import DetailInfo
-from components.network_node import NetworkNode
 
 from UART_parser import parse
-from helpers.config_helper import get_config_dict
 from helpers.parse_output_into_nodeinfo import build_node_information
-
 import sys
 import time
 import serial
@@ -33,9 +30,6 @@ class GraphRebuildWorker(QRunnable):
 
     @Slot()
     def run(self):
-        '''
-        Infinite loop to keep the thread running, printing current state of network nodes
-        '''
         while self._is_running:
             self.signals.print_nodes.emit(self.nodes)
             time.sleep(10)
@@ -66,10 +60,6 @@ class ParseWorker(QRunnable):
 
     @Slot()
     def run(self):
-        '''
-        Infinite loop to keep the thread running, parsing data from serial port
-        '''
-
         ser_settings = {
             "port": PORT,
             "baudrate": BAUDRATE,
@@ -95,11 +85,8 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setFixedHeight(RES_HEIGHT)
         self.setFixedWidth(RES_WIDTH)
-
+        self.setWindowTitle("WSN Demo 2.0")
         main_layout = QVBoxLayout()
-
-        self.prev_graph = None
-
         splitter = QSplitter()  
         splitter.setOrientation(Qt.Horizontal) 
 
@@ -119,15 +106,12 @@ class MainWindow(QMainWindow):
 
         self.network_graph = NetworkGraph()
         self.network_graph.G.add_node("1")
-
         self.previous_graph_nodes = self.network_graph.get_nodes()
 
         self.canvas = MplCanvas(self.canvas_panel, width=180, height=190, dpi=100, graph=self.network_graph.G, update_info=detail_info)
         self.canvas_layout.addWidget(self.canvas)
         self.canvas_panel.setLayout(self.canvas_layout)
 
-        
-        
         splitter.addWidget(detail_info)
         splitter.addWidget(self.canvas_panel)
 
@@ -159,15 +143,11 @@ class MainWindow(QMainWindow):
             if(node_info['ParentAddress'] == "ffff" and node_info['ShortAddress'] != "0000"):
                 self.network_graph.G.add_edge(short_address, "0000") # autoconnect to coordinator
 
-        #print("CURRENT ADDRESS: ", node_info['ShortAddress'])
-        #print("\nPARENT ADDRESS: ", node_info['ParentAddress'])
-
         if node_info["ParentAddress"] in self.network_graph.get_nodes():
-            self.network_graph.add_edge(short_address, node_info["ParentAddress"])
+            self.network_graph.G.add_edge(short_address, node_info["ParentAddress"])
     
         
     def work(self):
-        # Disable start button and enable stop button
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         # Pass the function to execute
@@ -177,16 +157,12 @@ class MainWindow(QMainWindow):
         self.print_worker = GraphRebuildWorker(self.network_graph)
         self.print_worker.signals.print_nodes.connect(self.rebuild_graph)
 
-
-        # Execute
         self.threadpool.start(self.parse_worker)
         self.threadpool.start(self.print_worker)
 
     def rebuild_graph(self, graph):
-        print("Rebuilding graph...")
         self.canvas.update_graph(graph.G)
-        
-    
+               
 
     # TODO: THIS DOESNT WORK AT ALL, STILL RUNNING AFTER STOP CLICKED
     def stop_work(self):

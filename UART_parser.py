@@ -60,6 +60,7 @@ def transform_message(buff : list) -> list:
         add_type = buff[additional_start_pointer]
         add_leng = int(buff[additional_start_pointer+1], 0)
 
+        # TODO: IMPLEMENT Additional data types
         match add_type:
             case "0x01": # Board type 1 sensors
                 data = buff[additional_start_pointer+2:additional_start_pointer+2+add_leng]
@@ -132,8 +133,6 @@ if __name__ == "__main__":
         "bytesize": serial.EIGHTBITS,
         "timeout": 0
     }
-
-
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--listen", type=str, default="true")
