@@ -3,3 +3,4 @@ WSNMonitor/
 project_venv/
 venv/
 venv_qt5/
+.vscode/
